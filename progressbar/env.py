@@ -75,3 +75,21 @@ JUPYTER = bool(os.environ.get('JUPYTER_COLUMNS') or os.environ.get('JUPYTER_LINE
 COLOR_SUPPORT = ColorSupport.from_env()
 ANSI_TERMS = ('([xe]|bv)term', '(sco)?ansi', 'cygwin', 'konsole', 'linux', 'rxvt', 'screen', 'tmux', 'vt(10[02]|220|320)')
 ANSI_TERM_RE = re.compile('^(' + '|'.join(ANSI_TERMS) + ')', re.IGNORECASE)
+
+def is_terminal(fd, is_terminal=None):
+    """Check if the file descriptor is a terminal."""
+    if is_terminal is not None:
+        return is_terminal
+
+    try:
+        return fd.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+def is_ansi_terminal(fd):
+    """Check if the file descriptor supports ANSI escape sequences."""
+    if not is_terminal(fd):
+        return False
+
+    term = os.environ.get('TERM', '').lower()
+    return bool(ANSI_TERM_RE.match(term))

@@ -93,6 +93,14 @@ class DefaultFdMixin(ProgressBarMixinBase):
     line_breaks: bool | None = True
     enable_colors: progressbar.env.ColorSupport = progressbar.env.COLOR_SUPPORT
 
+    def _apply_line_offset(self, fd: base.TextIO, line_offset: int) -> base.TextIO:
+        """Apply line offset to the file descriptor."""
+        if line_offset > 0:
+            for _ in range(line_offset):
+                fd.write('\n')
+            fd.flush()
+        return fd
+
     def __init__(self, fd: base.TextIO=sys.stderr, is_terminal: bool | None=None, line_breaks: bool | None=None, enable_colors: progressbar.env.ColorSupport | None=None, line_offset: int=0, **kwargs):
         if fd is sys.stdout:
             fd = utils.streams.original_stdout
