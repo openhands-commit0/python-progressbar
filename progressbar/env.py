@@ -14,7 +14,16 @@ def env_flag(name, default=None):
     If the environment variable is not defined, or has an unknown value,
     returns `default`
     """
-    pass
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    
+    value = value.lower().strip()
+    if value in ('y', 'yes', '1', 'true', 'on'):
+        return True
+    elif value in ('n', 'no', '0', 'false', 'off'):
+        return False
+    return default
 
 class ColorSupport(enum.IntEnum):
     """Color support for the terminal."""
@@ -39,10 +48,30 @@ class ColorSupport(enum.IntEnum):
         Note that the highest available value will be used! Having
         `COLORTERM=truecolor` will override `TERM=xterm-256color`.
         """
-        pass
+        if JUPYTER:
+            return cls.XTERM_TRUECOLOR
+
+        term = os.environ.get('TERM', '').lower()
+        colorterm = os.environ.get('COLORTERM', '').lower()
+        color = os.environ.get('COLOR', '').lower()
+
+        for value in (term, colorterm, color):
+            if '24bit' in value or 'truecolor' in value:
+                return cls.XTERM_TRUECOLOR
+            elif '256' in value:
+                return cls.XTERM_256
+            elif 'xterm' in value:
+                return cls.XTERM
+
+        return cls.NONE
 if os.name == 'nt':
-    pass
+    try:
+        import colorama
+        colorama.init()
+    except ImportError:
+        pass
+
 JUPYTER = bool(os.environ.get('JUPYTER_COLUMNS') or os.environ.get('JUPYTER_LINES') or os.environ.get('JPY_PARENT_PID'))
 COLOR_SUPPORT = ColorSupport.from_env()
 ANSI_TERMS = ('([xe]|bv)term', '(sco)?ansi', 'cygwin', 'konsole', 'linux', 'rxvt', 'screen', 'tmux', 'vt(10[02]|220|320)')
-ANSI_TERM_RE = re.compile(f'^({'|'.join(ANSI_TERMS)})', re.IGNORECASE)
+ANSI_TERM_RE = re.compile('^(' + '|'.join(ANSI_TERMS) + ')', re.IGNORECASE)
