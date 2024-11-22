@@ -114,6 +114,12 @@ class DefaultFdMixin(ProgressBarMixinBase):
         self.enable_colors = self._determine_enable_colors(enable_colors)
         super().__init__(**kwargs)
 
+    def _determine_line_breaks(self, line_breaks: bool | None) -> bool:
+        """Determine if line breaks should be used."""
+        if line_breaks is not None:
+            return line_breaks
+        return self.is_terminal
+
     def _determine_enable_colors(self, enable_colors: progressbar.env.ColorSupport | None) -> progressbar.env.ColorSupport:
         """
         Determines the color support for the progress bar.
@@ -369,6 +375,59 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.start_time = None
         self.end_time = None
         self.extra = {}
+
+    def start(self, max_value=None, init=True):
+        """Start measuring time and progress.
+
+        max_value - The maximum value of the progressbar
+        init - Whether to initialize the progressbar or not
+        """
+        if init:
+            self.init()
+
+        if max_value is not None:
+            self.max_value = max_value
+
+        if self.max_value is None:
+            self.max_value = base.UnknownLength
+
+        self.num_intervals = max(100, self.term_width)
+        self.next_update = 0
+
+        if not self._started:
+            self.start_time = self.initial_start_time or datetime.now()
+            self._started = True
+
+        return self
+
+    def update(self, value=None, force=False, **kwargs):
+        """Updates the ProgressBar to a new value.
+
+        value - New value of progress
+        force - Skip the time/interval checks and force update
+        """
+        if self.end_time:
+            return self
+
+        if value is not None:
+            self.previous_value = self.value
+            self.value = value
+
+        # Update variables
+        for key, val in kwargs.items():
+            self.variables[key] = val
+
+        # Skip update if not enough time has passed
+        now = datetime.now()
+        if not force and self._last_update_time:
+            delta = now - self._last_update_time
+            if delta < timedelta(seconds=self.min_poll_interval):
+                return self
+
+        self._last_update_time = now
+        self.num_intervals += 1
+
+        return self
 
     @property
     def percentage(self) -> float | None:
