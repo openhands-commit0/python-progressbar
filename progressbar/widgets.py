@@ -56,7 +56,13 @@ def wrapper(function, wrapper_):
     begin/end strings.
 
     """
-    pass
+    wrapper_format = create_wrapper(wrapper_)
+
+    def wrap_text(progress, data):
+        text = function(progress, data)
+        return wrapper_format.format(text) if wrapper_format else text
+
+    return wrap_text
 
 class FormatWidgetMixin(abc.ABC):
     """Mixin to format widgets using a formatstring.
@@ -588,6 +594,16 @@ class Bar(AutoWidthWidgetBase):
         self.fill = string_or_lambda(fill)
         self.fill_left = fill_left
         AutoWidthWidgetBase.__init__(self, **kwargs)
+
+    def _apply_colors(self, text: str, data: Data) -> str:
+        """Apply colors to the text based on the progress percentage."""
+        percentage = data.get('percentage')
+        if percentage is None:
+            return text
+
+        return terminal.apply_colors(text, percentage / 100.0,
+                                   fg=self.fg, bg=self.bg,
+                                   **self._fixed_colors)
 
     def __call__(self, progress: ProgressBarMixinBase, data: Data, width: int=0, color=True):
         """Updates the progress bar and its subcomponents."""
