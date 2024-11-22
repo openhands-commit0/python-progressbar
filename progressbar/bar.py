@@ -62,6 +62,7 @@ class ProgressBarMixinBase(abc.ABC):
         self._finished = False
         self._last_update_time = None
         self.extra = {}
+        self.variables = utils.AttributeDict()
 
     def __del__(self):
         if not self._finished and self._started:
@@ -348,6 +349,10 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.value = initial_value
         self._iterable = None
         self.custom_len = custom_len
+        self.initial_start_time = None
+        self.poll_interval = poll_interval
+        self.min_poll_interval = min_poll_interval
+        self.variables = utils.AttributeDict(variables or {})
         self.initial_start_time = kwargs.get('start_time')
         self.init()
         poll_interval = utils.deltas_to_seconds(poll_interval, default=None)
