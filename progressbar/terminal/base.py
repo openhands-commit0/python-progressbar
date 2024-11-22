@@ -221,6 +221,17 @@ class Colors:
     by_hls: ClassVar[defaultdict[HSL, types.List[Color]]] = collections.defaultdict(list)
     by_xterm: ClassVar[dict[int, Color]] = dict()
 
+    @classmethod
+    def register(cls, rgb: RGB, hls: HSL, name: str, xterm: int) -> Color:
+        """Register a new color with the given RGB, HSL, name and xterm code."""
+        color = Color(rgb, hls, name, xterm)
+        cls.by_name[name].append(color)
+        cls.by_lowername[name.lower()].append(color)
+        cls.by_rgb[rgb].append(color)
+        cls.by_hls[hls].append(color)
+        cls.by_xterm[xterm] = color
+        return color
+
     @staticmethod
     def interpolate(color1: Color, color2: Color, value: float) -> Color:
         """Interpolate between two colors based on a value between 0 and 1."""
