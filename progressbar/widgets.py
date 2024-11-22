@@ -148,6 +148,12 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
     _gradient_colors: ClassVar[TGradientColors] = TGradientColors(fg=None, bg=None)
     _len: typing.Callable[[str | bytes], int] = len
 
+    @property
+    def uses_colors(self) -> bool:
+        """Check if this widget uses colors."""
+        return bool(self._fixed_colors.get('fg_none') or self._fixed_colors.get('bg_none') or
+                   self._gradient_colors.get('fg') or self._gradient_colors.get('bg'))
+
     def __init__(self, *args, fixed_colors=None, gradient_colors=None, **kwargs):
         if fixed_colors is not None:
             self._fixed_colors.update(fixed_colors)

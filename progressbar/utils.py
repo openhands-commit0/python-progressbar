@@ -142,6 +142,10 @@ class WrappingIO:
         if hasattr(self.target, 'flush'):
             self.target.flush()
 
+    def isatty(self) -> bool:
+        """Return True if the target is a terminal."""
+        return hasattr(self.target, 'isatty') and self.target.isatty()
+
 class StreamWrapper:
     """Wrap stdout and stderr globally."""
     stdout: base.TextIO | WrappingIO
