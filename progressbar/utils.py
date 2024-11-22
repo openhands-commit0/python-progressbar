@@ -48,7 +48,22 @@ def deltas_to_seconds(*deltas, default: types.Optional[types.Type[ValueError]]=V
     >>> deltas_to_seconds(default=0.0)
     0.0
     """
-    pass
+    if not deltas and default is ValueError:
+        raise ValueError('No valid deltas passed to `deltas_to_seconds`')
+    elif not deltas:
+        return default
+
+    for delta in deltas:
+        if delta is None:
+            continue
+        elif isinstance(delta, datetime.timedelta):
+            return timedelta_to_seconds(delta)
+        elif isinstance(delta, (int, float)):
+            return float(delta)
+
+    if default is ValueError:
+        raise ValueError('No valid deltas passed to `deltas_to_seconds`')
+    return default
 
 def no_color(value: StringT) -> StringT:
     """
@@ -65,7 +80,12 @@ def no_color(value: StringT) -> StringT:
     ...
     TypeError: `value` must be a string or bytes, got 123
     """
-    pass
+    if not isinstance(value, (str, bytes)):
+        raise TypeError(f'`value` must be a string or bytes, got {value}')
+
+    # Pattern to match ANSI escape sequences
+    pattern = re.compile(rb'\x1b\[[^m]*m' if isinstance(value, bytes) else r'\x1b\[[^m]*m')
+    return types.cast(StringT, pattern.sub(b'' if isinstance(value, bytes) else '', value))
 
 def len_color(value: types.StringTypes) -> int:
     """
@@ -78,7 +98,7 @@ def len_color(value: types.StringTypes) -> int:
     >>> len_color('\x1b[1234]abc')
     3
     """
-    pass
+    return len(no_color(value))
 
 class WrappingIO:
     buffer: io.StringIO
@@ -130,6 +150,13 @@ class StreamWrapper:
             self.wrap_stdout()
         if env.env_flag('WRAP_STDERR', default=False):
             self.wrap_stderr()
+
+    def flush(self) -> None:
+        """Flush both stdout and stderr streams."""
+        if hasattr(self.stdout, 'flush'):
+            self.stdout.flush()
+        if hasattr(self.stderr, 'flush'):
+            self.stderr.flush()
 
 class AttributeDict(dict):
     """
