@@ -109,7 +109,20 @@ class WindowsColors(enum.Enum):
         >>> WindowsColors.from_rgb((128, 0, 128))
         <WindowsColors.MAGENTA: (128, 0, 128)>
         """
-        pass
+        min_distance = float('inf')
+        closest_color = None
+
+        for color in WindowsColors:
+            # Calculate Euclidean distance between colors
+            r1, g1, b1 = rgb
+            r2, g2, b2 = color.value
+            distance = ((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2) ** 0.5
+
+            if distance < min_distance:
+                min_distance = distance
+                closest_color = color
+
+        return closest_color
 
 class WindowsColor:
     """
@@ -139,7 +152,7 @@ class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
         Convert an RGB color (0-255 per channel) to the closest color in the
         Windows 16 color scheme.
         """
-        pass
+        return WindowsColors.from_rgb((self.red, self.green, self.blue))
 
 class HSL(collections.namedtuple('HSL', ['hue', 'saturation', 'lightness'])):
     """
@@ -156,7 +169,20 @@ class HSL(collections.namedtuple('HSL', ['hue', 'saturation', 'lightness'])):
         """
         Convert a 0-255 RGB color to a 0-255 HLS color.
         """
-        pass
+        # Convert RGB values to 0-1 range for colorsys
+        r = rgb.red / 255.0
+        g = rgb.green / 255.0
+        b = rgb.blue / 255.0
+
+        # Convert to HSL
+        h, l, s = colorsys.rgb_to_hls(r, g, b)
+
+        # Convert hue to 0-360 range and saturation/lightness to 0-100 range
+        h = h * 360
+        s = s * 100
+        l = l * 100
+
+        return cls(h, s, l)
 
 class ColorBase(abc.ABC):
     pass
@@ -195,6 +221,36 @@ class Colors:
     by_hls: ClassVar[defaultdict[HSL, types.List[Color]]] = collections.defaultdict(list)
     by_xterm: ClassVar[dict[int, Color]] = dict()
 
+    @staticmethod
+    def interpolate(color1: Color, color2: Color, value: float) -> Color:
+        """Interpolate between two colors based on a value between 0 and 1."""
+        if value <= 0:
+            return color1
+        elif value >= 1:
+            return color2
+
+        # Interpolate RGB values
+        r1, g1, b1 = color1.rgb
+        r2, g2, b2 = color2.rgb
+        r = int(r1 + (r2 - r1) * value)
+        g = int(g1 + (g2 - g1) * value)
+        b = int(b1 + (b2 - b1) * value)
+        rgb = RGB(r, g, b)
+
+        # Interpolate HSL values
+        h1, s1, l1 = color1.hls
+        h2, s2, l2 = color2.hls
+        h = h1 + (h2 - h1) * value
+        s = s1 + (s2 - s1) * value
+        l = l1 + (l2 - l1) * value
+        hsl = HSL(h, s, l)
+
+        # Use the name of the color we're closer to
+        name = color1.name if value < 0.5 else color2.name
+        xterm = color1.xterm if value < 0.5 else color2.xterm
+
+        return Color(rgb, hsl, name, xterm)
+
 class ColorGradient(ColorBase):
 
     def __init__(self, *colors: Color, interpolate=Colors.interpolate):
@@ -207,7 +263,17 @@ class ColorGradient(ColorBase):
 
     def get_color(self, value: float) -> Color:
         """Map a value from 0 to 1 to a color."""
-        pass
+        if value <= 0:
+            return self.colors[0]
+        elif value >= 1:
+            return self.colors[-1]
+
+        # Calculate which segment of the gradient we're in
+        segment_size = 1.0 / (len(self.colors) - 1)
+        segment = int(value / segment_size)
+        segment_value = (value - segment * segment_size) / segment_size
+
+        return self.interpolate(self.colors[segment], self.colors[segment + 1], segment_value)
 OptionalColor = types.Union[Color, ColorGradient, None]
 
 def apply_colors(text: str, percentage: float | None=None, *, fg: OptionalColor=None, bg: OptionalColor=None, fg_none: Color | None=None, bg_none: Color | None=None, **kwargs: types.Any) -> str:
@@ -217,7 +283,23 @@ def apply_colors(text: str, percentage: float | None=None, *, fg: OptionalColor=
     Otherwise, the `fg` and `bg` colors will be used. If the colors are
     gradients, the color will be interpolated depending on the percentage.
     """
-    pass
+    if percentage is None:
+        fg_color = fg_none
+        bg_color = bg_none
+    else:
+        fg_color = fg(percentage) if isinstance(fg, ColorGradient) else fg
+        bg_color = bg(percentage) if isinstance(bg, ColorGradient) else bg
+
+    if fg_color is None and bg_color is None:
+        return text
+
+    # Apply colors
+    if fg_color:
+        text = fg_color(text)
+    if bg_color:
+        text = bg_color(text)
+
+    return text
 
 class DummyColor:
 
