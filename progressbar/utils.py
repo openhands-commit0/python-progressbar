@@ -126,6 +126,22 @@ class WrappingIO:
     def __exit__(self, __t: type[BaseException] | None, __value: BaseException | None, __traceback: TracebackType | None) -> None:
         self.close()
 
+    def fileno(self) -> int:
+        """Return the file descriptor of the target."""
+        return self.target.fileno()
+
+    def close(self) -> None:
+        """Close the buffer and target."""
+        self.buffer.close()
+        if hasattr(self.target, 'close'):
+            self.target.close()
+
+    def flush(self) -> None:
+        """Flush the buffer and target."""
+        self.buffer.flush()
+        if hasattr(self.target, 'flush'):
+            self.target.flush()
+
 class StreamWrapper:
     """Wrap stdout and stderr globally."""
     stdout: base.TextIO | WrappingIO
