@@ -6,7 +6,7 @@ class SmoothingAlgorithm(abc.ABC):
 
     @abc.abstractmethod
     def __init__(self, **kwargs):
-        raise NotImplementedError
+        pass
 
     @abc.abstractmethod
     def update(self, new_value: float, elapsed: timedelta) -> float:
@@ -23,8 +23,14 @@ class ExponentialMovingAverage(SmoothingAlgorithm):
     """
 
     def __init__(self, alpha: float=0.5) -> None:
+        super().__init__()
         self.alpha = alpha
         self.value = 0
+
+    def update(self, new_value: float, elapsed: timedelta) -> float:
+        """Updates the EMA with a new value and returns the smoothed value."""
+        self.value = (self.alpha * new_value) + ((1 - self.alpha) * self.value)
+        return self.value
 
 class DoubleExponentialMovingAverage(SmoothingAlgorithm):
     """
@@ -34,6 +40,16 @@ class DoubleExponentialMovingAverage(SmoothingAlgorithm):
     """
 
     def __init__(self, alpha: float=0.5) -> None:
+        super().__init__()
         self.alpha = alpha
         self.ema1 = 0
         self.ema2 = 0
+
+    def update(self, new_value: float, elapsed: timedelta) -> float:
+        """Updates the DEMA with a new value and returns the smoothed value."""
+        # Update first EMA
+        self.ema1 = (self.alpha * new_value) + ((1 - self.alpha) * self.ema1)
+        # Update second EMA
+        self.ema2 = (self.alpha * self.ema1) + ((1 - self.alpha) * self.ema2)
+        # DEMA = 2 * EMA1 - EMA2
+        return 2 * self.ema1 - self.ema2
