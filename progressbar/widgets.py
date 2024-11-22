@@ -19,6 +19,14 @@ Data = types.Dict[str, types.Any]
 FormatString = typing.Optional[str]
 T = typing.TypeVar('T')
 
+def create_marker(marker, marker_wrap=None):
+    """Create a marker function that wraps the marker string if needed."""
+    if callable(marker):
+        return marker
+    if marker_wrap:
+        return lambda progress, data: marker_wrap % marker
+    return lambda progress, data: marker
+
 def create_wrapper(wrapper):
     """Convert a wrapper tuple or format string to a format string.
 
@@ -30,7 +38,12 @@ def create_wrapper(wrapper):
     >>> print(create_wrapper(('a', 'b')))
     a{}b
     """
-    pass
+    if not wrapper:
+        return None
+    elif isinstance(wrapper, tuple):
+        return wrapper[0] + '{}' + wrapper[1]
+    else:
+        return wrapper
 
 def wrapper(function, wrapper_):
     """Wrap the output of a function in a template string or a tuple with
