@@ -19,6 +19,12 @@ Data = types.Dict[str, types.Any]
 FormatString = typing.Optional[str]
 T = typing.TypeVar('T')
 
+def string_or_lambda(input_value):
+    """Convert a string to a lambda or return the callable."""
+    if callable(input_value):
+        return input_value
+    return lambda progress, data: input_value
+
 def create_marker(marker, marker_wrap=None):
     """Create a marker function that wraps the marker string if needed."""
     if callable(marker):
